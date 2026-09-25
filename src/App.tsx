@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { preloadAudio } from './audio/sfx';
 import { DEFAULT_LOOK } from './art/sprites';
 import { finishDay, newRun, type RunState } from './engine/run';
 import { Battle } from './ui/Battle';
@@ -21,6 +22,7 @@ function loadRun(): RunState | null {
 export function App() {
   const [run, setRun] = useState<RunState | null>(loadRun);
   const [playing, setPlaying] = useState(false);
+  useEffect(() => { preloadAudio(); }, []);
 
   // Save after every change so a refresh (or closing the tab) keeps the week.
   useEffect(() => {

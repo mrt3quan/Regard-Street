@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { paint } from '../art/px';
 import { avatar, mrMarket, office, type Look } from '../art/sprites';
-import { isMuted, play as sfx, setMuted, startMusic } from '../audio/sfx';
+import { play as sfx, playMusic, type Sfx } from '../audio/sfx';
 import { canPlay, endTurn, goHomeEarly, multiplier, playCard } from '../engine/battle';
-import { CARDS, DECKS } from '../engine/cards';
+import { CARDS, DECKS, type CardId } from '../engine/cards';
 import { EDGES } from '../engine/edges';
 import { TICKS } from '../engine/market';
 import { TURNS_PER_DAY } from '../engine/options';
@@ -15,6 +15,7 @@ import { Chart, type ChartLine } from './Chart';
 import { EndOfDay } from './EndOfDay';
 import { HowToPlay, howToSeen } from './HowToPlay';
 import { Hearts } from './Hearts';
+import { SoundButton } from './SoundButton';
 import { useCountUp } from './useCountUp';
 
 interface Anim {
@@ -24,6 +25,14 @@ interface Anim {
 }
 
 const L = 3; // logical scene pixel -> stage pixel
+
+/** The sound each card makes when played. */
+const CARD_SOUND: Record<CardId, Sfx> = {
+  buy: 'buy', short: 'sell', buyCalls: 'buy', buyPuts: 'sell', doubleDown: 'heavy',
+  sellPut: 'filled', sellCall: 'filled', coveredCall: 'filled', condor: 'heavy', buyStraddle: 'heavy',
+  stop: 'shield', protPut: 'shield', lockGains: 'shield',
+  takeProfit: 'profit', cutLoss: 'sell', roll: 'light', tape: 'printer', espresso: 'coffee',
+};
 
 function Scene({ look, mood, boss }: { look: Look; mood: BattleState['day']['mood']; boss: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -71,10 +80,17 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
   const [toast, setToast] = useState<{ text: string; tone: 'good' | 'bad' | 'info' } | null>(null);
   const [shake, setShake] = useState(false);
   const [help, setHelp] = useState(() => !howToSeen());
-  const [muted, setMutedState] = useState(isMuted());
+  const warned = useRef(false);
+  const goalHit = useRef(false);
   const deck = DECKS.find((d) => d.id === run.deckId)!;
 
-  useEffect(() => { sfx('bell'); startMusic(); }, []);
+  useEffect(() => {
+    sfx('bellOpen');
+    playMusic(s.boss ? 'boss' : s.day.mood === 'calm' ? 'office' : 'battle');
+    if (s.boss) window.setTimeout(() => sfx('bossWarning'), 900);
+    // Only on mount: the day's music is set once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---- derived view values (during the animation we show the live price over the old positions)
   const price = anim ? anim.result.path[anim.tick] : s.price;
@@ -94,8 +110,9 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
   const play = useCallback((uid: number) => {
     if (anim || help) return;
     const r = playCard(s, uid);
-    if (r.error) { sfx('error'); flash(r.error); return; }
-    sfx('card');
+    if (r.error) { sfx(r.error.startsWith('Risk desk') ? 'warning' : 'cancel'); flash(r.error); return; }
+    const card = s.hand.find((c) => c.uid === uid);
+    if (card) sfx(CARD_SOUND[card.id]);
     const newLines = r.state.log.slice(s.log.length);
     if (newLines.length) flash(newLines[newLines.length - 1].text, newLines[newLines.length - 1].tone);
     setS(r.state);
@@ -107,7 +124,7 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
     if (anim || help || s.status !== 'playing') return;
     const { state: next, result } = endTurn(s);
     if (!result) return;
-    sfx('turn');
+    sfx('keyboard');
     setPopup(null);
     setSelected(null);
     setAnim({ result, next, tick: 0 });
@@ -124,17 +141,31 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
         setAnim(null);
         const last = next.log.slice(s.log.length).pop();
         if (last) flash(last.text, last.tone);
-        if (next.status === 'won') sfx('win');
-        else if (next.status === 'lost') sfx('lose');
-        else if (result.gained > s.goal * 0.3) sfx('bigwin');
-        else if (result.gained > 0) sfx('coin');
+        const goal = s.goal;
+        if (result.stopped.length) sfx('shield');
+        if (result.event && s.boss) sfx('bossHit');
+        if (next.status === 'won') { sfx('victory'); playMusic('victory'); }
+        else if (next.status === 'lost') { sfx('defeat'); playMusic(null); }
+        else if (result.gained >= goal * 0.3) sfx('crit');
+        else if (result.gained >= goal * 0.12) sfx('bigProfit');
+        else if (result.gained > 0) sfx('profit');
         else if (result.gained < 0) sfx('loss');
-        if (next.turn >= TURNS_PER_DAY) sfx('bell');
+        if (next.turn >= TURNS_PER_DAY) window.setTimeout(() => sfx('bellClose'), 500);
+        if (next.status === 'playing') {
+          if (!goalHit.current && next.score >= goal) { goalHit.current = true; window.setTimeout(() => sfx('achievement'), 350); }
+          const pnl = next.realized + next.trades.reduce((a, t) => a + tradePnl(t, next.price, next.iv, turnsLeft(next)), 0);
+          if (!warned.current && pnl <= -next.lossLimit * 0.75) {
+            warned.current = true;
+            window.setTimeout(() => { sfx('warning'); flash('Careful: you have used 75% of your daily loss limit.'); }, 600);
+          }
+          const nextEvent = next.day.plan[next.turn]?.event;
+          if (nextEvent) window.setTimeout(() => sfx(next.boss ? 'bossWarning' : 'phone'), 900);
+        }
         if (result.gained < -s.goal * 0.25) { setShake(true); window.setTimeout(() => setShake(false), 450); }
       }, 250);
       return () => window.clearTimeout(id);
     }
-    if (anim.tick % 2 === 0) sfx('tick');
+    if (anim.tick % 3 === 0) sfx('tick');
     const id = window.setTimeout(() => setAnim({ ...anim, tick: anim.tick + 1 }), 85);
     return () => window.clearTimeout(id);
   }, [anim, s.log.length, s.goal, flash]);
@@ -190,9 +221,9 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
           <span className="dim"> · IV {Math.round(s.iv * 100)}%</span>
         </span>
         <span className="t20">{s.turn < TURNS_PER_DAY ? `${plan!.start} · turn ${s.turn + 1}/${TURNS_PER_DAY}` : 'Closed · 4:00 pm'}</span>
-        <button className="icon-btn t20" onClick={() => setHelp(true)} title="How to play">?</button>
-        <button className="icon-btn t20" onClick={() => { setMuted(!muted); setMutedState(!muted); }} title="Sound on/off">{muted ? 'Sound off' : 'Sound on'}</button>
-        <button className="icon-btn t20" onClick={onMenu} title="Back to the menu (this day restarts)">Menu</button>
+        <button className="icon-btn t20" onClick={() => { sfx('open'); setHelp(true); }} title="How to play">?</button>
+        <SoundButton />
+        <button className="icon-btn t20" onClick={() => { sfx('close'); onMenu(); }} title="Back to the menu (this day restarts)">Menu</button>
       </div>
       <div className="edges">
         {s.edges.map((id) => (
@@ -289,7 +320,7 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
             def={CARDS[c.id]}
             playable={!canPlay(s, c.uid) && !anim}
             onPointerUp={(e) => onCardPointer(e, c.uid)}
-            onHover={(h) => setHover(h ? c.uid : null)}
+            onHover={(h) => { if (h) sfx('hover'); setHover(h ? c.uid : null); }}
             style={{
               left: x0 + i * spacing,
               top: up ? 420 : 466 + Math.abs(i - mid) * 7,
@@ -307,7 +338,7 @@ export function Battle({ run, look, onFinish, onMenu }: Props) {
       <div className="pile discard t20" title="Discard pile">{s.discardPile.length}</div>
       <button className="end-turn t40" disabled={!!anim || s.status !== 'playing'} onClick={finishTurn}>End Turn</button>
       {s.status === 'playing' && s.score >= s.goal && !anim && (
-        <button className="go-home t20" onClick={() => { sfx('win'); setS(goHomeEarly(s)); }}>Lock it in & go home</button>
+        <button className="go-home t20" onClick={() => { sfx('victory'); playMusic('victory'); setS(goHomeEarly(s)); }}>Lock it in & go home</button>
       )}
 
       {s.status !== 'playing' && !anim && <EndOfDay s={s} run={run} onContinue={() => onFinish(s)} />}

@@ -181,3 +181,12 @@ input { font: inherit; }
 .rotate-hint .phone-icon { width: 60px; height: 100px; border: 6px solid #ffc94a; border-radius: 12px; animation: turn 1.6s ease-in-out infinite; }
 @keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(90deg); } }
 @media (orientation: portrait) and (pointer: coarse) { .rotate-hint { display: flex; } }
+
+/* painted props from the office art sheet */
+.prop { display: block; flex: none; image-rendering: auto; filter: drop-shadow(0 3px 0 rgba(26, 16, 24, 0.25)); pointer-events: none; }
+.shelf { display: flex; align-items: flex-end; justify-content: center; gap: 14px; padding: 8px 12px 10px; background: #3a2838; border: 3px solid #fff6e2; border-radius: 18px; }
+.shop-head { gap: 20px; }
+.shop-decor { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 22px; height: 96px; }
+.shop-decor .hang { align-self: flex-start; margin-top: -22px; }
+.lessons-head { justify-content: space-between; margin-bottom: -6px; }
+.row.center { justify-content: center; }

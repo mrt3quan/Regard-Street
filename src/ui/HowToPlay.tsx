@@ -1,3 +1,6 @@
+import { play as sfx } from '../audio/sfx';
+import { Prop } from './Prop';
+
 const KEY = 'regard-street:howto-seen';
 
 export function howToSeen(): boolean {
@@ -7,12 +10,13 @@ export function howToSeen(): boolean {
 export function HowToPlay({ onClose }: { onClose: () => void }) {
   const close = () => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage unavailable */ }
+    sfx('close');
     onClose();
   };
   return (
     <div className="overlay" onPointerUp={(e) => e.stopPropagation()}>
       <div className="panel howto">
-        <div className="t60 center">How to play</div>
+        <div className="row center gap"><Prop name="newspaper" h={56} /><span className="t60">How to play</span><Prop name="laptop" h={52} /></div>
         <ol className="t20">
           <li><b>Play cards</b> to open and close real trades. Each card costs Focus (the gold orb). Hover a card (or tap it once on a phone) to learn the real idea behind it.</li>
           <li><b>End Turn</b> and the market moves. Mr. Market tells you how BIG the next move is, never which way.</li>

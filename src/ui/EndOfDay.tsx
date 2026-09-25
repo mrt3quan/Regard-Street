@@ -1,7 +1,9 @@
 import { bonusFor, isBossDay, type RunState } from '../engine/run';
 import type { BattleState } from '../engine/state';
 import { fmtMoney } from '../engine/trades';
+import { play as sfx } from '../audio/sfx';
 import { Hearts } from './Hearts';
+import { Prop } from './Prop';
 
 /** Lessons drawn from what actually happened today. */
 export function lessons(s: BattleState): string[] {
@@ -43,21 +45,21 @@ export function EndOfDay({ s, run, onContinue }: { s: BattleState; run: RunState
   return (
     <div className="overlay">
       <div className={`panel end ${won ? 'won' : 'lost'}`}>
-        <div className="t60 center">{won ? (s.boss ? 'You beat The Chair!' : 'Great day!') : blewUp ? 'Risk desk shut you down.' : 'Tough day.'}</div>
+        <div className="row center gap">{won && <Prop name="trophy" h={54} />}<span className="t60">{won ? (s.boss ? 'You beat The Chair!' : 'Great day!') : blewUp ? 'Risk desk shut you down.' : 'Tough day.'}</span>{won && <Prop name="coins" h={40} />}</div>
         <div className="t20 center dim-d">{s.endReason}</div>
         <div className="end-stats">
           <div><span className="t20 dim-d">Score (goal {s.goal.toLocaleString('en-US')})</span><span className={`t40 ${won ? 'up-d' : 'down-d'}`}>{s.score.toLocaleString('en-US')}</span></div>
           <div><span className="t20 dim-d">Day P&L</span><span className={`t40 ${s.realized >= 0 ? 'up-d' : 'down-d'}`}>{fmtMoney(s.realized, true)}</span></div>
-          <div><span className="t20 dim-d">Desk bonus</span><span className="t40 gold-d">+${bonus.total}</span>
+          <div><span className="t20 dim-d">Desk bonus</span><span className="row"><Prop name="cash_small" h={24} /><span className="t40 gold-d">+${bonus.total}</span></span>
             {won && <span className="t20 dim-d">{bonus.base} base{bonus.overshoot ? ` · ${bonus.overshoot} beat goal` : ''}{bonus.interest ? ` · ${bonus.interest} interest` : ''}{bonus.edge ? ` · ${bonus.edge} tax wizard` : ''}</span>}</div>
           <div><span className="t20 dim-d">Boss trust</span><Hearts n={trustAfter} />{!won && <span className="t20 down-d">-{blewUp ? 2 : 1}</span>}</div>
         </div>
         <div className="lessons">
-          <div className="t20 gold-d">What today teaches</div>
+          <div className="row lessons-head"><span className="t20 gold-d">What today teaches</span><Prop name="newspaper" h={40} /></div>
           {lessons(s).map((l) => <div key={l} className="t20 lesson">• {l}</div>)}
         </div>
         <div className="row center gap">
-          <button className="btn green t40" onClick={onContinue}>{label}</button>
+          <button className="btn green t40" onClick={() => { sfx('confirm'); onContinue(); }}>{label}</button>
         </div>
       </div>
     </div>

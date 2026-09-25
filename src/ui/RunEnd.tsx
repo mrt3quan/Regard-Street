@@ -1,15 +1,21 @@
+import { useEffect } from 'react';
+import { play as sfx, playMusic } from '../audio/sfx';
 import { WEEKDAYS, type RunState } from '../engine/run';
 import { fmtMoney } from '../engine/trades';
 import { Hearts } from './Hearts';
+import { Prop } from './Prop';
 
 export function RunEnd({ run, onNewWeek }: { run: RunState; onNewWeek: () => void }) {
   const cleared = run.phase === 'cleared';
   const pnl = run.results.reduce((a, r) => a + r.pnl, 0);
   const blowUps = run.results.filter((r) => r.blewUp).length;
+  useEffect(() => {
+    if (cleared) { sfx('levelUp'); playMusic('victory'); } else { sfx('defeat'); playMusic('menu'); }
+  }, [cleared]);
   return (
     <div className="overlay solid">
       <div className={`panel end ${cleared ? 'won' : 'lost'}`}>
-        <div className="t60 center">{cleared ? 'Week cleared!' : "You're fired!"}</div>
+        <div className="row center gap">{cleared ? <><Prop name="trophy" h={60} /><span className="t60">Week cleared!</span><Prop name="gold_bars" h={70} /></> : <><Prop name="briefcase" h={56} /><span className="t60">You're fired!</span><Prop name="cat_white" h={40} /></>}</div>
         <div className="t20 center dim-d">
           {cleared
             ? 'You survived the week and beat The Chair. The promotion committee is watching (careers arrive in a later update).'
@@ -43,7 +49,7 @@ export function RunEnd({ run, onNewWeek }: { run: RunState; onNewWeek: () => voi
                 : 'Missing goals day after day adds up. Look for the setups that fit the day: sell premium on calm days, step aside before big news, follow a trend with a stop.'}
           </div>
         </div>
-        <div className="row center"><button className="btn green t40" onClick={onNewWeek}>New week</button></div>
+        <div className="row center"><button className="btn green t40" onClick={() => { sfx('confirm'); onNewWeek(); }}>New week</button></div>
       </div>
     </div>
   );
