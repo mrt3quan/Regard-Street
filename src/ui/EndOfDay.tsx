@@ -1,5 +1,7 @@
+import { bonusFor, isBossDay, type RunState } from '../engine/run';
 import type { BattleState } from '../engine/state';
 import { fmtMoney } from '../engine/trades';
+import { Hearts } from './Hearts';
 
 /** Lessons drawn from what actually happened today. */
 export function lessons(s: BattleState): string[] {
@@ -31,26 +33,31 @@ export function lessons(s: BattleState): string[] {
   return out.slice(0, 4);
 }
 
-export function EndOfDay({ s, onNewDay, onExit }: { s: BattleState; onNewDay: () => void; onExit: () => void }) {
+export function EndOfDay({ s, run, onContinue }: { s: BattleState; run: RunState; onContinue: () => void }) {
   const won = s.status === 'won';
+  const blewUp = !!s.endReason?.includes('loss limit');
+  const bonus = bonusFor(run, s);
+  const trustAfter = Math.max(0, run.trust - (won ? 0 : blewUp ? 2 : 1));
+  const fired = trustAfter === 0;
+  const label = fired ? 'See what happened' : won && isBossDay(run) ? 'Finish the week' : `Collect $${bonus.total} & visit the shop`;
   return (
     <div className="overlay">
       <div className={`panel end ${won ? 'won' : 'lost'}`}>
-        <div className="t60 center">{won ? 'Great day!' : 'Tough day.'}</div>
+        <div className="t60 center">{won ? (s.boss ? 'You beat The Chair!' : 'Great day!') : blewUp ? 'Risk desk shut you down.' : 'Tough day.'}</div>
         <div className="t20 center dim-d">{s.endReason}</div>
         <div className="end-stats">
           <div><span className="t20 dim-d">Score (goal {s.goal.toLocaleString('en-US')})</span><span className={`t40 ${won ? 'up-d' : 'down-d'}`}>{s.score.toLocaleString('en-US')}</span></div>
           <div><span className="t20 dim-d">Day P&L</span><span className={`t40 ${s.realized >= 0 ? 'up-d' : 'down-d'}`}>{fmtMoney(s.realized, true)}</span></div>
-          <div><span className="t20 dim-d">Trades</span><span className="t40">{s.stats.tradesOpened}</span></div>
-          <div><span className="t20 dim-d">Close</span><span className="t40">${s.price.toFixed(2)}</span></div>
+          <div><span className="t20 dim-d">Desk bonus</span><span className="t40 gold-d">+${bonus.total}</span>
+            {won && <span className="t20 dim-d">{bonus.base} base{bonus.overshoot ? ` · ${bonus.overshoot} beat goal` : ''}{bonus.interest ? ` · ${bonus.interest} interest` : ''}{bonus.edge ? ` · ${bonus.edge} tax wizard` : ''}</span>}</div>
+          <div><span className="t20 dim-d">Boss trust</span><Hearts n={trustAfter} />{!won && <span className="t20 down-d">-{blewUp ? 2 : 1}</span>}</div>
         </div>
         <div className="lessons">
           <div className="t20 gold-d">What today teaches</div>
           {lessons(s).map((l) => <div key={l} className="t20 lesson">• {l}</div>)}
         </div>
         <div className="row center gap">
-          <button className="btn green t40" onClick={onNewDay}>Next day</button>
-          <button className="btn t40" onClick={onExit}>Change deck</button>
+          <button className="btn green t40" onClick={onContinue}>{label}</button>
         </div>
       </div>
     </div>

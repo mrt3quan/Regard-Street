@@ -6,19 +6,20 @@ interface Props {
   def: CardDef;
   playable: boolean;
   style?: React.CSSProperties;
-  onClick?: () => void;
+  onPointerUp?: (e: React.PointerEvent) => void;
   onHover?: (hovering: boolean) => void;
+  small?: boolean;
 }
 
-export function CardView({ def, playable, style, onClick, onHover }: Props) {
+export function CardView({ def, playable, style, onPointerUp, onHover, small }: Props) {
   const [base, dark, art] = TYPE_COLORS[def.type];
   return (
     <div
-      className={`card ${playable ? 'playable' : 'blocked'}`}
+      className={`card ${playable ? 'playable' : 'blocked'} ${small ? 'static' : ''}`}
       style={{ ...style, ['--c' as string]: base, ['--d' as string]: dark, ['--a' as string]: art }}
-      onClick={onClick}
-      onMouseEnter={() => onHover?.(true)}
-      onMouseLeave={() => onHover?.(false)}
+      onPointerUp={onPointerUp}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') onHover?.(true); }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') onHover?.(false); }}
     >
       <div className="card-name">{def.name}</div>
       <div className="card-art"><PixelIcon rows={ICONS[def.id]} scale={6} /></div>

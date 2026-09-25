@@ -73,7 +73,18 @@ change the market.
 Coffee Addict, Theta Gang, Risk Desk Buddy, Tape Reader, Momentum Mike. More come from the life
 sim later (a spouse who is an accountant, a mentor, a car...).
 
-## 4. Enemies (planned, Step 2)
+## 3b. The week (built in Step 2)
+
+- Five days, goals rising Mon ×1.0 → Fri ×1.6 (Monday goal: Stock 220, Iron Condor 450).
+- **Boss trust, 3 hearts:** a missed goal costs 1, the loss limit costs 2, zero hearts = fired.
+  Chosen over "one loss ends the run" because a market day is partly luck; the design punishes
+  blow-ups more than bad days, which is the real lesson.
+- **Desk bonus:** $4 per won day, +$1 per half-goal beaten (max 4), +$1 interest per $5 saved (max 3),
+  $1 for a missed day. **Shop:** 3 cards (common $3, uncommon $5, rare $7), 1 Edge ($6, max 4),
+  reroll ($2 +1 each), remove one card ($3, deck minimum 8).
+- Balance (bots, no shopping): skilled play clears the week about 2-2.5× as often as random play.
+
+## 4. Enemies (planned)
 
 Mr. Market is the face of every normal day; his mask shows the mood (calm, jittery, wild).
 - **Elites:** The Whale (huge orders shove the price), The Algo Swarm (slippage), The Meme Mob,
@@ -120,7 +131,7 @@ accessories, pronouns.
 | Step | Playable result |
 |---|---|
 | **1. Trading day** | One card-battle day on the real simulator, 2 decks, Edges, lessons. **Done.** |
-| 2. Trading week | Week map, elites and bosses, card shop and upgrades, Friday review |
+| **2. Trading week** | Mon-Fri run, Friday boss (The Chair), boss trust hearts, shop, new cards and Edges. **Done.** Still to come: week map with elite days |
 | 3. The world | Walkable Harbor City (Phaser): home, Exchange Row, trading floor, tram |
 | 4. Phone and life | Broker app, news feed, sectors, character creator, barber |
 | 5. Career and gurus | Promotions, guru allies and scams, relationships, house and car |

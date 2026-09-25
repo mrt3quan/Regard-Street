@@ -88,14 +88,24 @@ export function turnClock(index: number): string {
   return `${h12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'pm' : 'am'}`;
 }
 
-export function createDay(seed: string, ticker?: Ticker): MarketDay {
+/** Friday's boss: the Central Reserve rate decision lands at 2:00 pm, inside turn 6. */
+export const BOSS_EVENT: MarketEvent = {
+  name: 'Fed decision',
+  blurb: 'BOSS: The Chair announces interest rates at 2:00 pm. The whole market holds its breath.',
+  size: 4.6,
+};
+export const BOSS_TURN = 5;
+
+export function createDay(seed: string, ticker?: Ticker, boss = false): MarketDay {
   const r = rng(`${seed}:day`);
   const t = ticker ?? r.pick(TICKERS);
   const iv = Math.round(r.uniform(0.3, 0.55) * 100) / 100;
-  const mood: Mood = r.pick(['calm', 'calm', 'jittery', 'jittery', 'wild']);
+  const mood: Mood = boss ? r.pick(['jittery', 'jittery', 'wild']) : r.pick(['calm', 'calm', 'jittery', 'jittery', 'wild']);
   const rho = r.next() < 0.65 ? r.uniform(0.35, 0.55) : r.uniform(-0.3, -0.1);
-  const eventTurn = r.next() < 0.75 ? 2 + r.int(5) : -1;
-  const event = eventTurn >= 0 ? r.pick(EVENTS) : null;
+  const randomTurn = r.next() < 0.75 ? 2 + r.int(5) : -1;
+  const randomEvent = r.pick(EVENTS);
+  const eventTurn = boss ? BOSS_TURN : randomTurn;
+  const event = boss ? BOSS_EVENT : randomTurn >= 0 ? randomEvent : null;
 
   // Correlated turns add up to a bigger (trend) or smaller (chop) day. Rescale so the whole
   // day's move stays in line with the mood, and fat tails don't inflate it either.

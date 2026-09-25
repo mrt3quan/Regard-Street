@@ -110,8 +110,8 @@ const MOOD_MASK: Record<Mood, { mask: string; suit: string }> = {
 };
 
 /** Mr. Market. His mask shows how jumpy the day is, never which way it will go. */
-export function mrMarket(bx: number, by: number, mood: Mood): void {
-  const m = MOOD_MASK[mood];
+export function mrMarket(bx: number, by: number, mood: Mood, boss = false): void {
+  const m = boss ? { mask: '#fffaf0', suit: '#2f3a5a' } : MOOD_MASK[mood];
   const SUIT: Pal = { base: m.suit, o: OUT, shade: shadeHex(m.suit, -0.18), sd: 4 };
   shadow(bx, by, 30, 5, 0.3);
   rr(bx - 12, by - 26, 10, 24, 3, { base: '#3b3050', o: OUT }); rr(bx + 2, by - 26, 10, 24, 3, { base: '#3b3050', o: OUT });
@@ -121,9 +121,17 @@ export function mrMarket(bx: number, by: number, mood: Mood): void {
   disc(bx - 4, by - 66, 3.5, { base: '#ffc94a', o: OUT }); disc(bx + 4, by - 66, 3.5, { base: '#ffc94a', o: OUT }); disc(bx, by - 66, 2, { base: '#e0a020', o: OUT });
   rr(bx - 30, by - 68, 10, 30, 5, SUIT); rr(bx + 20, by - 68, 10, 30, 5, SUIT);
   disc(bx - 25, by - 36, 5, { base: '#f0d0b8', o: OUT }); disc(bx + 25, by - 36, 5, { base: '#f0d0b8', o: OUT });
-  rr(bx + 20, by - 50, 16, 16, 4, { base: '#fffaf0', o: OUT, shade: '#e8dccb', sd: 2 });
-  for (const [a, b] of [[24, -46], [30, -46], [27, -43], [24, -40], [30, -40]]) R(bx + a, by + b, 2, 2, OUT);
-  disc(bx - 30, by - 44, 7, { base: '#ffc94a', o: OUT, shine: '#fff2b0' });
+  if (boss) {
+    // The Chair holds a gavel instead of the die and coin.
+    rr(bx + 24, by - 62, 4, 30, 1, { base: '#8a5a3c', o: OUT });
+    rr(bx + 16, by - 70, 22, 12, 4, { base: '#a86a45', o: OUT, shade: '#8a5232', sd: 3 });
+    rr(bx - 38, by - 50, 16, 20, 2, { base: '#fffaf0', o: OUT });
+    for (let j = 0; j < 4; j++) R(bx - 35, by - 46 + j * 4, 10, 1, '#b8b0a8');
+  } else {
+    rr(bx + 20, by - 50, 16, 16, 4, { base: '#fffaf0', o: OUT, shade: '#e8dccb', sd: 2 });
+    for (const [a, b] of [[24, -46], [30, -46], [27, -43], [24, -40], [30, -40]]) R(bx + a, by + b, 2, 2, OUT);
+    disc(bx - 30, by - 44, 7, { base: '#ffc94a', o: OUT, shine: '#fff2b0' });
+  }
   disc(bx, by - 92, 20, { base: '#f0d0b8', o: OUT, shade: '#e0b89c' });
   ell(bx, by - 95, 19, 9, { base: m.mask, o: OUT, shade: shadeHex(m.mask, -0.08), sd: 2 });
   ell(bx - 8, by - 95, 4, 3, '#2b1d27'); ell(bx + 8, by - 95, 4, 3, '#2b1d27');
@@ -131,7 +139,7 @@ export function mrMarket(bx: number, by: number, mood: Mood): void {
   R(bx - 5, by - 80, 10, 1, OUT);
   ell(bx, by - 110, 24, 4, { base: '#3b2a36', o: OUT });
   rr(bx - 14, by - 134, 28, 25, 6, { base: '#4a3a5a', o: OUT, hi: '#6a5a7a' });
-  R(bx - 13, by - 116, 26, 4, '#ffc94a');
+  R(bx - 13, by - 116, 26, 4, boss ? '#e8574a' : '#ffc94a');
 }
 
 // ---------------------------------------------------------------- office

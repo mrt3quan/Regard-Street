@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endTurn, newBattle, playCard } from '../src/engine/battle';
+import { endTurn, newDeckBattle as newBattle, playCard } from '../src/engine/battle';
 import { createDay, turnPath, TICKS } from '../src/engine/market';
 import { normCdf, optionPrice } from '../src/engine/options';
 import { maxLoss, tradePnl } from '../src/engine/trades';

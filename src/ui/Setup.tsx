@@ -4,7 +4,8 @@ import { avatar, DEFAULT_LOOK } from '../art/sprites';
 import { DECKS } from '../engine/cards';
 import { EDGE_IDS, EDGES, type EdgeId } from '../engine/edges';
 import { rng } from '../engine/rng';
-import type { DaySetup } from './Battle';
+import { WEEKDAYS, type RunState } from '../engine/run';
+import { Hearts } from './Hearts';
 
 const PAYOFF: Record<string, (v: number) => number> = {
   stock: (v) => v * 0.9,
@@ -42,7 +43,13 @@ function Preview() {
   return <canvas ref={ref} className="preview" />;
 }
 
-export function Setup({ onStart }: { onStart: (s: DaySetup) => void }) {
+interface Props {
+  saved: RunState | null;
+  onContinue: () => void;
+  onStart: (seed: string, deckId: string, edge: EdgeId, name: string) => void;
+}
+
+export function Setup({ saved, onContinue, onStart }: Props) {
   const [deckId, setDeckId] = useState('stock');
   const [name, setName] = useState('Alex');
   const [runSeed] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
@@ -56,9 +63,15 @@ export function Setup({ onStart }: { onStart: (s: DaySetup) => void }) {
         <div className="t20 dim">A cozy trading roguelike. Every company is fictional. Not financial advice.</div>
         <Preview />
         <label className="t20 name-field">Your name <input className="t20" value={name} maxLength={14} onChange={(e) => setName(e.target.value)} /></label>
-        <div className="t20 dim">Junior Trader at Pemberton & Vale</div>
-        <button className="btn green t40 start" onClick={() => onStart({ seed: `${runSeed}-1`, deckId, edges: [edge], look: DEFAULT_LOOK, name: name.trim() || 'Alex' })}>
-          Start trading day
+        <div className="t20 dim">Junior Trader at Pemberton & Vale. Survive Monday to Friday.</div>
+        {saved && (
+          <button className="btn t40 continue" onClick={onContinue}>
+            Continue {WEEKDAYS[saved.day]}
+            <span className="row center t20"><Hearts n={saved.trust} /> ${saved.cash} · {saved.name}</span>
+          </button>
+        )}
+        <button className="btn green t40 start" onClick={() => onStart(runSeed, deckId, edge, name.trim() || 'Alex')}>
+          {saved ? 'New week' : 'Start the week'}
         </button>
       </div>
       <div className="setup-right">
@@ -70,7 +83,7 @@ export function Setup({ onStart }: { onStart: (s: DaySetup) => void }) {
               <Payoff fn={PAYOFF[d.id]} />
               <div className="t20">{d.blurb}</div>
               <div className="t20"><span className="dim-d">Wins when</span> <span className="up-d">{d.winsWhen}</span></div>
-              <div className="t20"><span className="dim-d">Max risk</span> {d.risk}{d.locked ? '' : ` · Goal ${d.goal}`}</div>
+              <div className="t20"><span className="dim-d">Max risk</span> {d.risk}{d.locked ? '' : ` · Mon goal ${d.goal}`}</div>
             </button>
           ))}
         </div>

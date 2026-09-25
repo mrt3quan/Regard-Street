@@ -14,8 +14,14 @@ export const ICONS: Record<CardId, string[]> = {
   sellCall: ['ooooooooo', 'oRRRRRRRo', 'oG.....Go', 'oG.....Go', 'oG.....Go', 'oGGGGGGGo', 'oG.....Go', 'o.......o'],
   condor: ['ooooooooo', 'oRRRRRRRo', 'oG.....Go', 'oGGGGGGGo', 'oG.....Go', 'oRRRRRRRo', 'ooooooooo', '.........'],
   roll: ['...oo....', '..oPPo...', '.oPPPPooo', '...oPPPPo', 'ooooPPPo.', '.oPPPPo..', '...oPo...', '....o....'],
+  lockGains: ['..ooooo..', '.o.....o.', '.o.....o.', 'ooooooooo', 'oYYYYYYYo', 'oYYYoYYYo', 'oYYYoYYYo', 'ooooooooo'],
+  doubleDown: ['..o...o..', '.oGo.oGo.', 'oGGGoGGGo', '.oGo.oGo.', '.oGo.oGo.', '.oGo.oGo.', '.ooo.ooo.', '.........'],
+  buyCalls: ['...ooo...', '..oGGGo..', '.oGGoGGo.', 'oGGoooGGo', 'oGGGoGGGo', '.oGGoGGo.', '..oGGGo..', '...ooo...'],
+  buyPuts: ['...ooo...', '..oRRRo..', '.oRRoRRo.', 'oRRRoRRRo', 'oRRoooRRo', '.oRRoRRo.', '..oRRRo..', '...ooo...'],
+  buyStraddle: ['oo.....oo', 'oGo...oGo', '.oGo.oGo.', '.oGo.oGo.', '..oGoGo..', '..oRRRo..', '...oRo...', '....o....'],
+  coveredCall: ['....oooo.', '...oGGGo.', '..ooooooo', '.oWWWWWWo', '.oWBBBBWo', '.oWWWWWWo', '.oWBBBBWo', '.oooooooo'],
 };
-export const ICON_COLORS: Record<string, string> = { o: '#3b2a36', G: '#5aa84a', R: '#e8574a', W: '#fffaf0', B: '#6aa0e0', P: '#8a60c8' };
+export const ICON_COLORS: Record<string, string> = { o: '#3b2a36', G: '#5aa84a', R: '#e8574a', W: '#fffaf0', B: '#6aa0e0', P: '#8a60c8', Y: '#ffc94a' };
 
 export const TYPE_COLORS: Record<string, [string, string, string]> = {
   // base, dark, art background
@@ -26,4 +32,5 @@ export const TYPE_COLORS: Record<string, [string, string, string]> = {
   CLOSE: ['#ffc94a', '#d8a020', '#fff2c8'],
   SKILL: ['#c8b8a8', '#9a8878', '#f3ece4'],
   ADJUST: ['#b58af0', '#8a60c8', '#e8dcff'],
+  VOL: ['#f28bb0', '#c9608a', '#fde0ea'],
 };

@@ -1,10 +1,11 @@
 // Plays many days with simple bots to check the goal is reachable with skill and not by luck.
 import { describe, expect, it } from 'vitest';
-import { endTurn, newBattle, playCard } from '../src/engine/battle';
+import { endTurn, newDeckBattle as newBattle, playCard } from '../src/engine/battle';
 import { CARDS, type CardId } from '../src/engine/cards';
 import { rng } from '../src/engine/rng';
 import type { BattleState } from '../src/engine/state';
 import { tradePnl, turnsLeft } from '../src/engine/trades';
+import { battleFor, finishDay, newRun, nextDay, type RunState } from '../src/engine/run';
 
 type Bot = (s: BattleState, r: ReturnType<typeof rng>) => CardId[];
 
@@ -15,8 +16,8 @@ function tryPlay(s: BattleState, id: CardId): BattleState {
   return r.error ? s : r.state;
 }
 
-function run(seed: string, deck: string, bot: Bot): BattleState {
-  let s = newBattle(seed, deck, []);
+function playDay(start: BattleState, seed: string, bot: Bot): BattleState {
+  let s = start;
   const r = rng(`${seed}:bot`);
   while (s.status === 'playing') {
     for (let guard = 0; guard < 10; guard++) {
@@ -62,6 +63,24 @@ const momentumPro: Bot = (s) => {
 /** Stacks as much risk as possible with no protection. */
 const reckless: Bot = () => ['buy', 'short', 'sellPut', 'sellCall', 'condor', 'espresso'];
 
+function run(seed: string, deck: string, bot: Bot): BattleState {
+  return playDay(newBattle(seed, deck, []), seed, bot);
+}
+
+/** Plays whole weeks without shopping; returns how often the week is cleared. */
+function weekRate(deck: string, bot: Bot, n = 200): number {
+  let cleared = 0;
+  for (let i = 0; i < n; i++) {
+    let r: RunState = newRun(`week-${i}`, deck, 'riskBuddy', 'Bot');
+    while (r.phase !== 'cleared' && r.phase !== 'fired') {
+      r = finishDay(r, playDay(battleFor(r), `${r.seed}:${r.day}`, bot));
+      if (r.phase === 'shop') r = nextDay(r);
+    }
+    if (r.phase === 'cleared') cleared++;
+  }
+  return cleared / n;
+}
+
 function stats(deck: string, bot: Bot, n = 400) {
   let wins = 0, lossLimit = 0, total = 0;
   for (let i = 0; i < n; i++) {
@@ -84,10 +103,20 @@ describe('balance', () => {
       recklessStock: stats('stock', reckless),
     };
     process.stdout.write('\nBAL ' + Object.entries(table).map(([k, v]) => `${k.padEnd(15)} win ${(v.winRate * 100).toFixed(1).padStart(5)}%  limit ${(v.lossLimitRate * 100).toFixed(1).padStart(5)}%  avg ${v.avgScore}`).join('\nBAL ') + '\n');
-    expect(table.momentumStock.winRate).toBeGreaterThan(table.randomStock.winRate);
+    expect(table.momentumStock.winRate).toBeGreaterThan(table.randomStock.winRate + 0.1);
     expect(table.proCondor.winRate).toBeGreaterThan(table.randomCondor.winRate + 0.1);
-    expect(table.momentumStock.winRate).toBeGreaterThan(0.3);
-    expect(table.proCondor.winRate).toBeGreaterThan(0.35);
+  });
+
+  it('a skilled week clears far more often than a random one', () => {
+    const weeks = {
+      randomStock: weekRate('stock', random),
+      momentumStock: weekRate('stock', momentumPro),
+      randomCondor: weekRate('condor', random),
+      proCondor: weekRate('condor', condorPro),
+    };
+    process.stdout.write('\nWEEK ' + Object.entries(weeks).map(([k, v]) => `${k.padEnd(15)} cleared ${(v * 100).toFixed(1)}%`).join('\nWEEK ') + '\n');
+    expect(weeks.momentumStock).toBeGreaterThan(weeks.randomStock * 2);
+    expect(weeks.proCondor).toBeGreaterThan(weeks.randomCondor * 2);
     void CARDS; void reckless;
   });
 });

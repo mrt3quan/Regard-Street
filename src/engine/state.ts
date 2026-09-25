@@ -10,14 +10,20 @@ export interface Leg {
   entry: number;
 }
 
-export type TradeKind = 'long' | 'short' | 'protected' | 'putSpread' | 'callSpread' | 'condor';
+export type TradeKind =
+  | 'long' | 'short' | 'protected' | 'covered'
+  | 'putSpread' | 'callSpread' | 'condor'
+  | 'longCall' | 'longPut' | 'straddle';
 
 export interface Trade {
   id: number;
   label: string;
   kind: TradeKind;
   legs: Leg[];
-  /** Close automatically if the trade's loss reaches this many dollars. */
+  /**
+   * Close automatically once the trade's P&L falls to -stop. A negative stop locks in a profit
+   * (a trailing stop): -100 closes the trade if its P&L drops back to +$100.
+   */
   stop: number | null;
   openedTurn: number;
 }
@@ -75,6 +81,8 @@ export interface BattleState {
   deckId: string;
   day: MarketDay;
   edges: EdgeId[];
+  /** Friday boss day. */
+  boss: boolean;
   /** Index of the turn being played, 0..TURNS_PER_DAY. TURNS_PER_DAY means the market has closed. */
   turn: number;
   status: 'playing' | 'won' | 'lost';

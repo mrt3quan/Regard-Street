@@ -15,6 +15,11 @@ export function Stage({ children }: { children: ReactNode }) {
   return (
     <div className="viewport">
       <div className="stage" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})` }}>{children}</div>
+      <div className="rotate-hint">
+        <div className="phone-icon" />
+        <div className="t40">Turn your phone sideways</div>
+        <div className="t20">Regard Street plays in landscape.</div>
+      </div>
     </div>
   );
 }

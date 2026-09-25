@@ -2,7 +2,7 @@
 // returns an error message instead when the card can't be played right now.
 
 import { drawCards } from './deck';
-import { optionPrice } from './options';
+import { expectedMove, optionPrice } from './options';
 import type { BattleState } from './state';
 import {
   closeTrade, creditSpreadLegs, credit, fmtMoney, openTrade, tradePnl, turnsLeft,
@@ -10,15 +10,18 @@ import {
 
 export type CardId =
   | 'buy' | 'short' | 'stop' | 'takeProfit' | 'cutLoss' | 'tape' | 'protPut' | 'espresso'
-  | 'sellPut' | 'sellCall' | 'condor' | 'roll';
+  | 'sellPut' | 'sellCall' | 'condor' | 'roll'
+  | 'lockGains' | 'doubleDown' | 'buyCalls' | 'buyPuts' | 'buyStraddle' | 'coveredCall';
 
-export type CardType = 'LONG' | 'SHORT' | 'PREMIUM' | 'SAFE' | 'CLOSE' | 'SKILL' | 'ADJUST';
+export type CardType = 'LONG' | 'SHORT' | 'PREMIUM' | 'SAFE' | 'CLOSE' | 'SKILL' | 'ADJUST' | 'VOL';
+export type Rarity = 'common' | 'uncommon' | 'rare';
 
 export interface CardDef {
   id: CardId;
   name: string;
   cost: number;
   type: CardType;
+  rarity: Rarity;
   text: string;
   /** Plain-language explanation of the real concept behind the card. */
   learn: { term: string; text: string };
@@ -32,6 +35,8 @@ export const CONTRACTS = 10;
 export const STOP_DOLLARS = 250;
 const MIN_CREDIT = 0.05;
 
+export const OPTION_CONTRACTS = 3;
+
 const log = (s: BattleState, text: string, tone: 'good' | 'bad' | 'info' = 'info') => s.log.push({ turn: s.turn, text, tone });
 
 function sellSpread(s: BattleState, type: 'put' | 'call', sds: number): string | null {
@@ -44,7 +49,7 @@ function sellSpread(s: BattleState, type: 'put' | 'call', sds: number): string |
 
 export const CARDS: Record<CardId, CardDef> = {
   buy: {
-    id: 'buy', name: 'Buy 100', cost: 1, type: 'LONG',
+    id: 'buy', name: 'Buy 100', cost: 1, type: 'LONG', rarity: 'common',
     text: `Buy ${SHARES} shares. Win if the price rises.`,
     learn: { term: 'Going long', text: 'Buying shares. Every $1 the price rises earns you $1 per share, and every $1 it falls costs you the same.' },
     play(s) {
@@ -54,7 +59,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   short: {
-    id: 'short', name: 'Short 100', cost: 1, type: 'SHORT',
+    id: 'short', name: 'Short 100', cost: 1, type: 'SHORT', rarity: 'common',
     text: `Sell ${SHARES} borrowed shares. Win if it falls.`,
     learn: { term: 'Short selling', text: 'You borrow shares, sell them now, and buy them back later. If the price falls you pocket the difference. If it rises, your loss has no ceiling.' },
     play(s) {
@@ -64,7 +69,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   stop: {
-    id: 'stop', name: 'Stop Loss', cost: 0, type: 'SAFE',
+    id: 'stop', name: 'Stop Loss', cost: 0, type: 'SAFE', rarity: 'common',
     text: `Auto-close each open trade if it loses ${fmtMoney(STOP_DOLLARS)}.`,
     learn: { term: 'Stop loss', text: 'An order that closes your trade automatically once the loss hits a limit you chose in advance. Pros decide where they are wrong BEFORE they enter. (Spreads get a stop at 2x the money you collected.)' },
     play(s) {
@@ -76,7 +81,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   takeProfit: {
-    id: 'takeProfit', name: 'Take Profit', cost: 1, type: 'CLOSE',
+    id: 'takeProfit', name: 'Take Profit', cost: 1, type: 'CLOSE', rarity: 'common',
     text: 'Close every winning trade. Lock it in.',
     learn: { term: 'Taking profit', text: 'Money on the screen is not yours until you close the trade. Many option sellers close at 50% of the max profit instead of waiting for the last dollar.' },
     play(s) {
@@ -89,7 +94,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   cutLoss: {
-    id: 'cutLoss', name: 'Cut Losses', cost: 0, type: 'CLOSE',
+    id: 'cutLoss', name: 'Cut Losses', cost: 0, type: 'CLOSE', rarity: 'common',
     text: 'Close every losing trade.',
     learn: { term: 'Cutting losses', text: 'Small losses are part of trading. The dangerous ones are the losses you hold on to hoping they come back.' },
     play(s) {
@@ -102,7 +107,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   tape: {
-    id: 'tape', name: 'Read the Tape', cost: 0, type: 'SKILL',
+    id: 'tape', name: 'Read the Tape', cost: 0, type: 'SKILL', rarity: 'common',
     text: 'Draw 2 cards.',
     learn: { term: 'Reading the tape', text: 'Watching the flow of trades and prices to get a feel for the market. The name comes from the paper ticker tape of the 1900s.' },
     play(s) {
@@ -111,7 +116,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   espresso: {
-    id: 'espresso', name: 'Double Espresso', cost: 0, type: 'SKILL', exhaust: true,
+    id: 'espresso', name: 'Double Espresso', cost: 0, type: 'SKILL', rarity: 'rare', exhaust: true,
     text: '+1 Focus now. Used up for the day.',
     learn: { term: 'Focus', text: 'Your energy for the day. Every trade costs attention; tired traders make sloppy trades.' },
     play(s) {
@@ -120,7 +125,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   protPut: {
-    id: 'protPut', name: 'Protective Put', cost: 1, type: 'SAFE',
+    id: 'protPut', name: 'Protective Put', cost: 1, type: 'SAFE', rarity: 'uncommon',
     text: 'Buy a put under your shares. Caps your loss.',
     learn: { term: 'Protective put', text: 'A put is insurance: it pays off if the price falls below its strike. Owning shares plus a put means your worst case is known in advance.' },
     play(s) {
@@ -137,19 +142,19 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   sellPut: {
-    id: 'sellPut', name: 'Sell Put Spread', cost: 1, type: 'PREMIUM',
+    id: 'sellPut', name: 'Sell Put Spread', cost: 1, type: 'PREMIUM', rarity: 'common',
     text: 'Get paid now. Keep it if price stays ABOVE.',
     learn: { term: 'Put credit spread', text: `You sell a put and buy a cheaper one below it (${CONTRACTS} contracts, expiring at 4pm). You collect money up front. The bought put caps your loss if the price crashes.` },
     play: (s) => sellSpread(s, 'put', 1.0),
   },
   sellCall: {
-    id: 'sellCall', name: 'Sell Call Spread', cost: 1, type: 'PREMIUM',
+    id: 'sellCall', name: 'Sell Call Spread', cost: 1, type: 'PREMIUM', rarity: 'common',
     text: 'Get paid now. Keep it if price stays BELOW.',
     learn: { term: 'Call credit spread', text: `You sell a call and buy a cheaper one above it (${CONTRACTS} contracts, expiring at 4pm). You collect money up front, and the bought call caps your loss if the price rockets.` },
     play: (s) => sellSpread(s, 'call', 1.0),
   },
   condor: {
-    id: 'condor', name: 'Iron Condor', cost: 2, type: 'PREMIUM',
+    id: 'condor', name: 'Iron Condor', cost: 2, type: 'PREMIUM', rarity: 'uncommon',
     text: 'Sell both spreads. Win if price stays in the middle.',
     learn: { term: 'Iron condor', text: 'Two credit spreads at once, one on each side. It profits when the market stays quiet. Only one side can lose at the close, so the risk is capped.' },
     play(s) {
@@ -162,7 +167,7 @@ export const CARDS: Record<CardId, CardDef> = {
     },
   },
   roll: {
-    id: 'roll', name: 'Roll Away', cost: 1, type: 'ADJUST',
+    id: 'roll', name: 'Roll Away', cost: 1, type: 'ADJUST', rarity: 'uncommon',
     text: 'Move your worst option trade further away.',
     learn: { term: 'Rolling', text: 'Closing a threatened option position and re-opening it at a safer strike. It usually locks in a small loss to avoid a big one.' },
     play(s) {
@@ -184,7 +189,91 @@ export const CARDS: Record<CardId, CardDef> = {
       return null;
     },
   },
+  lockGains: {
+    id: 'lockGains', name: 'Lock Gains', cost: 0, type: 'SAFE', rarity: 'uncommon',
+    text: 'Winning trades close if they give back half their profit.',
+    learn: { term: 'Trailing stop', text: 'Moving your stop up as a trade wins, so a winner cannot turn into a loser. Here: if a winning trade falls back to half of its current profit, it closes.' },
+    play(s) {
+      const tl = turnsLeft(s);
+      const winners = s.trades.filter((t) => tradePnl(t, s.price, s.iv, tl) > 20);
+      if (!winners.length) return 'You need a trade that is in profit first.';
+      for (const t of winners) t.stop = -Math.round(tradePnl(t, s.price, s.iv, tl) * 0.5);
+      log(s, `Trailing stops set on ${winners.length} winner${winners.length > 1 ? 's' : ''}.`, 'good');
+      return null;
+    },
+  },
+  doubleDown: {
+    id: 'doubleDown', name: 'Double Down', cost: 1, type: 'ADJUST', rarity: 'uncommon',
+    text: `Add ${SHARES} more shares in the direction you already hold.`,
+    learn: { term: 'Pyramiding vs averaging down', text: 'Adding to a WINNING trade can boost profits. Adding to a LOSING one ("averaging down") is how many blow-ups start. Check your P&L before you press.' },
+    play(s) {
+      const shares = s.trades.flatMap((t) => t.legs).filter((l) => l.kind === 'stock').reduce((a, l) => a + l.qty, 0);
+      if (shares === 0) return 'You need a stock position first.';
+      const long = shares > 0;
+      openTrade(s, long ? 'long' : 'short', `${long ? 'Long' : 'Short'} ${SHARES} ${s.day.ticker.symbol}`, [{ kind: 'stock', strike: 0, qty: long ? SHARES : -SHARES, entry: s.price }]);
+      log(s, `Doubled down: ${long ? 'bought' : 'shorted'} ${SHARES} more at $${s.price.toFixed(2)}.`);
+      return null;
+    },
+  },
+  buyCalls: {
+    id: 'buyCalls', name: 'Buy Calls', cost: 1, type: 'LONG', rarity: 'common',
+    text: 'Cheap bet on a rise. You can only lose what you pay.',
+    learn: { term: 'Call option', text: `The right to BUY at the strike price (${OPTION_CONTRACTS} contracts, expiring at 4pm). If the price shoots up you win big; if not, the call slowly loses value (time decay) and can expire worthless.` },
+    play: (s) => buyOptions(s, 'call'),
+  },
+  buyPuts: {
+    id: 'buyPuts', name: 'Buy Puts', cost: 1, type: 'SHORT', rarity: 'common',
+    text: 'Cheap bet on a drop. You can only lose what you pay.',
+    learn: { term: 'Put option', text: `The right to SELL at the strike price (${OPTION_CONTRACTS} contracts, expiring at 4pm). It gains when the price falls. Also used as insurance for shares you own.` },
+    play: (s) => buyOptions(s, 'put'),
+  },
+  buyStraddle: {
+    id: 'buyStraddle', name: 'Buy Straddle', cost: 2, type: 'VOL', rarity: 'rare',
+    text: 'Own a call AND a put. Win on a big move either way.',
+    learn: { term: 'Long straddle', text: 'You own both a call and a put at the same strike. You win if the price moves MORE than what you paid, up or down. Traders buy these before big news, and lose when nothing happens.' },
+    play(s) {
+      const tl = turnsLeft(s);
+      const k = Math.round(s.price);
+      const px = (type: 'call' | 'put') => Math.round(optionPrice(type, s.price, k, tl, s.iv) * 100) / 100;
+      openTrade(s, 'straddle', `Straddle ${k}`, [
+        { kind: 'call', strike: k, qty: OPTION_CONTRACTS, entry: px('call') },
+        { kind: 'put', strike: k, qty: OPTION_CONTRACTS, entry: px('put') },
+      ]);
+      log(s, `Bought a ${k} straddle for ${fmtMoney((px('call') + px('put')) * OPTION_CONTRACTS * 100)}.`);
+      return null;
+    },
+  },
+  coveredCall: {
+    id: 'coveredCall', name: 'Covered Call', cost: 1, type: 'PREMIUM', rarity: 'uncommon',
+    text: 'Sell a call on shares you own. Paid now, upside capped.',
+    learn: { term: 'Covered call', text: 'You sell someone the right to buy your shares at a higher price. You get paid now, but give up gains above the strike. With a protective put too, it is called a collar.' },
+    play(s) {
+      const t = [...s.trades].reverse().find((x) => (x.kind === 'long' || x.kind === 'protected') && !x.legs.some((l) => l.kind === 'call'));
+      if (!t) return 'You need long shares without a call sold on them.';
+      const tl = turnsLeft(s);
+      const contracts = Math.round(t.legs[0].qty / 100);
+      const strike = Math.ceil(s.price * (1 + expectedMove(s.iv, tl)));
+      const entry = Math.round(optionPrice('call', s.price, strike, tl, s.iv) * 100) / 100;
+      if (entry < MIN_CREDIT) return 'The call is worth almost nothing this late in the day.';
+      t.legs.push({ kind: 'call', strike, qty: -contracts, entry });
+      if (t.kind === 'long') t.kind = 'covered';
+      t.label = t.kind === 'protected' ? `Collar ${t.legs.find((l) => l.kind === 'put')?.strike}/${strike}` : `Covered call ${strike}`;
+      s.stats.premiumCollected += entry * contracts * 100;
+      log(s, `Sold a ${strike} call on your shares for ${fmtMoney(entry * contracts * 100)}.`);
+      return null;
+    },
+  },
 };
+
+function buyOptions(s: BattleState, type: 'call' | 'put'): string | null {
+  const tl = turnsLeft(s);
+  const strike = type === 'call' ? Math.ceil(s.price * 1.004) : Math.floor(s.price * 0.996);
+  const entry = Math.round(optionPrice(type, s.price, strike, tl, s.iv) * 100) / 100;
+  if (entry < MIN_CREDIT) return 'These options are almost worthless this late in the day.';
+  openTrade(s, type === 'call' ? 'longCall' : 'longPut', `${OPTION_CONTRACTS} ${strike} ${type}s`, [{ kind: type, strike, qty: OPTION_CONTRACTS, entry }]);
+  log(s, `Bought ${OPTION_CONTRACTS} ${strike} ${type}s for ${fmtMoney(entry * OPTION_CONTRACTS * 100)}.`);
+  return null;
+}
 
 export interface DeckDef {
   id: string;
@@ -193,7 +282,7 @@ export interface DeckDef {
   winsWhen: string;
   risk: string;
   difficulty: number;
-  /** Score needed to win a day with this deck. */
+  /** Monday's score goal with this deck (later days ask for more). */
   goal: number;
   cards: CardId[];
   locked?: boolean;
@@ -202,12 +291,12 @@ export interface DeckDef {
 export const DECKS: DeckDef[] = [
   {
     id: 'stock', name: 'Stock Starter', blurb: 'Buy and short shares. Simple, honest, and unforgiving.',
-    winsWhen: 'Price goes your way', risk: 'Big if wrong: use stops', difficulty: 1, goal: 400,
+    winsWhen: 'Price goes your way', risk: 'Big if wrong: use stops', difficulty: 1, goal: 220,
     cards: ['buy', 'buy', 'buy', 'short', 'short', 'short', 'stop', 'stop', 'takeProfit', 'cutLoss', 'tape', 'protPut', 'espresso'],
   },
   {
     id: 'condor', name: 'Iron Condor', blurb: 'Sell options and get paid for time passing. Win when the market stays calm.',
-    winsWhen: 'Price stays in a range', risk: 'Capped', difficulty: 3, goal: 800,
+    winsWhen: 'Price stays in a range', risk: 'Capped', difficulty: 3, goal: 450,
     cards: ['sellPut', 'sellPut', 'sellPut', 'sellCall', 'sellCall', 'sellCall', 'condor', 'takeProfit', 'takeProfit', 'roll', 'stop', 'tape', 'espresso'],
   },
   { id: 'wheel', name: 'The Wheel', blurb: 'Coming soon.', winsWhen: 'Slow and steady', risk: 'Own the drop', difficulty: 3, goal: 0, cards: [], locked: true },

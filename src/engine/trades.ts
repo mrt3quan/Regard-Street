@@ -52,9 +52,13 @@ export function maxLoss(t: Trade): number | null {
     return Math.max(...widths) - credit(t);
   }
   if (t.kind === 'protected' && stock) {
-    const put = opts.find((l) => l.kind === 'put');
-    if (put) return (stock.entry - put.strike) * stock.qty + put.entry * put.qty * CONTRACT;
+    const put = opts.find((l) => l.kind === 'put' && l.qty > 0);
+    const shortCall = opts.find((l) => l.kind === 'call' && l.qty < 0);
+    const callCredit = shortCall ? -shortCall.qty * shortCall.entry * CONTRACT : 0;
+    if (put) return (stock.entry - put.strike) * stock.qty + put.entry * put.qty * CONTRACT - callCredit;
   }
+  // Bought options only: the most you can lose is what you paid.
+  if (!stock && opts.length && opts.every((l) => l.qty > 0)) return opts.reduce((a, l) => a + legCost(l), 0);
   if (t.stop != null) return t.stop;
   return null;
 }

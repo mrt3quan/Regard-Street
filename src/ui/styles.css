@@ -35,6 +35,7 @@ input { font: inherit; }
 .clipboard { position: absolute; left: 30px; top: 114px; width: 240px; height: 198px; background: #fffaf0; border: 3px solid #c8b8a0; border-radius: 9px; padding: 8px 10px; overflow: hidden; }
 .trade { margin-top: 6px; }
 .trade .small { color: #8a6a58; }
+.trade.compact { margin-top: 3px; }
 .clip-foot { position: absolute; left: 10px; right: 10px; bottom: 6px; border-top: 3px solid #eadcc4; padding-top: 4px; color: #6e5a50; }
 
 .tv { position: absolute; left: 462px; top: 66px; width: 372px; height: 186px; overflow: hidden; }
@@ -119,3 +120,64 @@ input { font: inherit; }
 .edge-card { flex: 1; display: flex; gap: 10px; align-items: flex-start; text-align: left; background: #fff6e2; color: #3b2a36; border: 3px solid #3b2a36; border-radius: 15px; padding: 8px 10px; }
 .edge-card.sel { outline: 6px solid #ffc94a; }
 .start { margin-top: auto; }
+
+/* ---------------- Step 2: week, shop, feel ---------------- */
+.battle { position: absolute; inset: 0; }
+.shake { animation: shake 0.45s; }
+@keyframes shake { 10%, 90% { transform: translate(-3px, 0); } 20%, 80% { transform: translate(6px, 3px); } 30%, 50%, 70% { transform: translate(-9px, -3px); } 40%, 60% { transform: translate(9px, 3px); } }
+.bump { animation: bump 0.35s ease-out; }
+@keyframes bump { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.btn:disabled { filter: grayscale(0.8) brightness(0.9); cursor: not-allowed; }
+.btn.danger { background: #e8574a; box-shadow: inset 0 -9px 0 #c9463a; }
+.center-self { align-self: center; }
+
+.cash { background: #ffc94a; color: #3b2a36; border: 3px solid #3b2a36; border-radius: 12px; padding: 1px 8px; }
+.hearts { display: inline-flex; gap: 4px; align-items: center; }
+.heart { width: 21px; height: 18px; background: #6a5060; clip-path: polygon(50% 100%, 0 45%, 0 15%, 15% 0, 35% 0, 50% 15%, 65% 0, 85% 0, 100% 15%, 100% 45%); }
+.heart.full { background: #f0506a; }
+.boss-banner { position: absolute; left: 870px; top: 48px; transform: rotate(-4deg); background: #e8574a; color: #fff; border: 3px solid #3b2a36; border-radius: 12px; padding: 3px 12px 0; z-index: 4; box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25); }
+
+.panel.howto { width: 760px; padding: 24px 34px 28px; display: flex; flex-direction: column; gap: 16px; }
+.panel.howto ol { display: flex; flex-direction: column; gap: 12px; padding-left: 28px; color: #3b2a36; }
+.panel.howto b { color: #c95a46; font-weight: normal; }
+.overlay.solid { background: #2b1d27; }
+
+.week-table { width: 100%; border-collapse: collapse; background: #fffaf0; border: 3px solid #eadcc4; border-radius: 12px; }
+.week-table th { color: #8a6a58; font-weight: normal; text-align: left; padding: 6px 10px; border-bottom: 3px solid #eadcc4; }
+.week-table td { padding: 6px 10px; }
+
+.continue { display: flex; flex-direction: column; gap: 6px; align-items: center; margin-top: auto; }
+.continue + .start { margin-top: 0; }
+
+/* shop */
+.shop { position: absolute; inset: 0; padding: 22px 30px; display: flex; flex-direction: column; gap: 14px; color: #fff6e2;
+  background: radial-gradient(circle at 20% 0%, #5a3a3a, transparent 55%), radial-gradient(circle at 90% 100%, #3a4a3a, transparent 55%), #2e2226; }
+.shop-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.shop-status { display: flex; gap: 18px; align-items: center; }
+.cash-big { color: #ffc94a; text-shadow: 0 4px 0 #1a1018; }
+.shop-body { display: flex; gap: 24px; flex: 1; min-height: 0; }
+.shop-left { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.offers { display: flex; gap: 22px; }
+.offer { width: 250px; background: #fff6e2; border: 3px solid #3b2a36; border-radius: 18px; padding: 18px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #3b2a36; box-shadow: inset 0 -6px 0 #f0e0c0; }
+.offer.sold { opacity: 0.5; }
+.offer-learn { height: 60px; overflow: hidden; text-align: center; }
+.offer-learn .gold { color: #b07a1a; }
+.card.static { position: relative; cursor: default; flex: none; }
+.small-btn { padding: 6px 18px 10px; }
+.shop-row { display: flex; gap: 12px; align-items: stretch; }
+.shop-row .btn { padding: 8px 14px 12px; }
+.edge-offer { flex: 1; display: flex; gap: 10px; align-items: center; background: #fff6e2; color: #3b2a36; border: 3px solid #3b2a36; border-radius: 15px; padding: 8px 10px; }
+.edge-offer.sold { opacity: 0.5; }
+.shop-msg { background: rgba(59, 42, 54, 0.9); border-radius: 12px; padding: 6px 12px; align-self: flex-start; }
+.shop-right { width: 340px; display: flex; flex-direction: column; gap: 10px; }
+.deck-list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+.deck-row { display: flex; gap: 10px; align-items: center; background: #fff6e2; color: #3b2a36; border: 3px solid #3b2a36; border-radius: 12px; padding: 5px 10px; text-align: left; cursor: default; }
+.deck-row .dot { width: 27px; height: 27px; border-radius: 50%; background: var(--c); border: 3px solid var(--d); display: grid; place-items: center; color: #fff; flex: none; }
+.deck-row.removable { cursor: pointer; outline: 3px dashed #e8574a; }
+.deck-row.removable:hover { background: #ffd8d0; }
+.next-day { padding: 10px 12px 14px; }
+
+.rotate-hint { position: fixed; inset: 0; z-index: 1000; background: #2b1d27; color: #fff6e2; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; }
+.rotate-hint .phone-icon { width: 60px; height: 100px; border: 6px solid #ffc94a; border-radius: 12px; animation: turn 1.6s ease-in-out infinite; }
+@keyframes turn { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(90deg); } }
+@media (orientation: portrait) and (pointer: coarse) { .rotate-hint { display: flex; } }

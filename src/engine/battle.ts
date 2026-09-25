@@ -7,7 +7,7 @@
 // The day is won if the score reaches the goal by the 4:00 pm close.
 // It is lost if the day's P&L hits the loss limit (the risk desk shuts you down) or the goal is missed.
 
-import { CARDS, DECKS } from './cards';
+import { CARDS, DECKS, type CardId } from './cards';
 import { drawCards } from './deck';
 import type { EdgeId } from './edges';
 import { createDay, TICKS, turnPath, type Ticker } from './market';
@@ -21,26 +21,43 @@ export const HAND_SIZE = 5;
 export const LOSS_LIMIT = 2500;
 export const RISK_BUDGET = 6000;
 
-export function newBattle(seed: string, deckId: string, edges: EdgeId[], ticker?: Ticker): BattleState {
-  const deck = DECKS.find((d) => d.id === deckId);
-  if (!deck || deck.locked) throw new Error(`Unknown deck ${deckId}`);
-  const day = createDay(seed, ticker);
-  const cards: CardInstance[] = deck.cards.map((id, uid) => ({ uid, id }));
+export interface BattleOptions {
+  seed: string;
+  deckId: string;
+  cards: CardId[];
+  edges: EdgeId[];
+  goal: number;
+  /** Friday: The Chair's rate decision lands mid-afternoon. */
+  boss?: boolean;
+  ticker?: Ticker;
+}
+
+export function newBattle(o: BattleOptions): BattleState {
+  const day = createDay(o.seed, o.ticker, o.boss);
+  const cards: CardInstance[] = o.cards.map((id, uid) => ({ uid, id }));
+  const edges = o.edges;
   const s: BattleState = {
-    seed, deckId, day, edges,
+    seed: o.seed, deckId: o.deckId, day, edges, boss: !!o.boss,
     turn: 0, status: 'playing', endReason: null,
     price: day.open, iv: day.iv, candles: [],
-    focus: 0, hand: [], drawPile: rng(`${seed}:deal`).shuffle(cards), discardPile: [], exhausted: [], shuffles: 0,
+    focus: 0, hand: [], drawPile: rng(`${o.seed}:deal`).shuffle(cards), discardPile: [], exhausted: [], shuffles: 0,
     trades: [], nextTradeId: 1, realized: 0,
-    score: 0, goal: deck.goal,
+    score: 0, goal: o.goal,
     lossLimit: LOSS_LIMIT + (edges.includes('riskBuddy') ? 1000 : 0) - (edges.includes('coffee') ? 500 : 0),
     log: [{ turn: 0, text: `Market open. ${day.ticker.name} (${day.ticker.symbol}) at $${day.open.toFixed(2)}.`, tone: 'info' }],
-    riskBudget: RISK_BUDGET,
+    riskBudget: RISK_BUDGET + (edges.includes('bigBook') ? 3000 : 0),
     lastTurn: null,
     stats: { tradesOpened: 0, bestTurn: 0, worstTurn: 0, stopsHit: 0, heldThroughEvent: false, premiumCollected: 0 },
   };
   startTurn(s);
   return s;
+}
+
+/** A single day with a starter deck, as used by the tests and quick play. */
+export function newDeckBattle(seed: string, deckId: string, edges: EdgeId[] = [], ticker?: Ticker): BattleState {
+  const deck = DECKS.find((d) => d.id === deckId);
+  if (!deck || deck.locked) throw new Error(`Unknown deck ${deckId}`);
+  return newBattle({ seed, deckId, cards: deck.cards, edges, goal: deck.goal, ticker });
 }
 
 function startTurn(s: BattleState): void {
@@ -62,6 +79,9 @@ export function multiplier(s: BattleState): { total: number; parts: MultPart[] }
   if (hasPut && hasCall) parts.push({ name: 'Full condor', value: 1, why: 'You are paid on both sides of the price.' });
   if (s.edges.includes('thetaGang') && open.some((t) => t.legs.some((l) => l.kind !== 'stock' && l.qty < 0))) {
     parts.push({ name: 'Theta Gang', value: 1, why: 'Edge: you hold sold options.' });
+  }
+  if (s.edges.includes('volHunter') && open.some((t) => t.legs.some((l) => l.kind !== 'stock' && l.qty > 0))) {
+    parts.push({ name: 'Vol Hunter', value: 1, why: 'Edge: you own options.' });
   }
   if (s.edges.includes('momentum') && s.candles.length) {
     const last = s.candles[s.candles.length - 1];
