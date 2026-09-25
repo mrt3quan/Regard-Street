@@ -8,7 +8,7 @@ The full game design is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Play it
 
-**In the browser:** https://mrt3quan.github.io/regard-street/ (updates automatically on every push to `main`).
+**In the browser:** https://mrt3quan.github.io/Regard-Street/ (updates automatically on every push to `main`).
 Works on phones too: turn the phone sideways, tap a card once to read it, tap again to play it.
 
 **Locally** (Node 22 or newer):
